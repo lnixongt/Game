@@ -1,5 +1,4 @@
-import { useRef, useEffect, useMemo } from "react";
-import { useTexture } from "@react-three/drei";
+import { useRef, useEffect } from "react";
 import * as THREE from "three";
 
 interface PlatformProps {
@@ -9,45 +8,41 @@ interface PlatformProps {
   color?: string;
 }
 
-export function Platform({ position, size, texture = "grass", color = "green" }: PlatformProps) {
+// Get color based on texture type for better visuals without textures
+const getColorForTexture = (textureName: string): string => {
+  switch (textureName) {
+    case 'grass': return '#4CAF50'; // Green
+    case 'wood': return '#8D6E63';  // Brown
+    case 'sand': return '#FDD835';  // Yellow
+    case 'asphalt': return '#607D8B'; // Gray-blue
+    default: return '#4CAF50';
+  }
+};
+
+export function Platform({ position, size, texture = "grass", color }: PlatformProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   
-  // Create a stable key for texture loading based on texture type
-  const textureKey = useMemo(() => {
-    return `/textures/${texture}.${texture === 'grass' || texture === 'asphalt' ? 'png' : 'jpg'}`;
-  }, [texture]);
-  
-  // Load texture if specified
-  let textureMap;
-  try {
-    textureMap = texture ? useTexture(textureKey) : null;
-  } catch (err) {
-    console.warn(`Texture ${texture} could not be loaded, falling back to color`);
-    textureMap = null;
-  }
-  
-  // Apply texture settings when available
-  useEffect(() => {
-    if (textureMap) {
-      textureMap.wrapS = textureMap.wrapT = THREE.RepeatWrapping;
-      textureMap.repeat.set(size[0], size[2]);
-    }
-  }, [textureMap, size]);
-
-  // Register this platform for collision detection with a stable reference
+  // Set up platform data for collision detection
   useEffect(() => {
     if (meshRef.current) {
-      const platformPosition = new THREE.Vector3(...position);
+      // Create a stable position vector to avoid recreating the function
+      const posVector = new THREE.Vector3(...position);
       
       meshRef.current.userData = {
         isPlatform: true,
         width: size[0],
         height: size[1],
         depth: size[2],
-        getPosition: () => platformPosition,
+        getPosition: () => posVector,
       };
     }
+  // We use an empty dependency array to set this up once on component mount
+  // The position and size in userData are captured in the closure
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Use color based on texture type or provided color
+  const platformColor = color || getColorForTexture(texture);
 
   return (
     <mesh 
@@ -57,10 +52,7 @@ export function Platform({ position, size, texture = "grass", color = "green" }:
       castShadow
     >
       <boxGeometry args={size} />
-      <meshStandardMaterial 
-        color={textureMap ? "#ffffff" : color} 
-        map={textureMap} 
-      />
+      <meshStandardMaterial color={platformColor} />
     </mesh>
   );
 }
