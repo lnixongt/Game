@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useGameStore } from "../lib/stores/useGameStore";
 import { useAudio } from "../lib/stores/useAudio";
 
@@ -6,57 +6,26 @@ export function SoundManager() {
   const gameState = useGameStore((state) => state.gameState);
   const { 
     backgroundMusic,
-    setBackgroundMusic,
-    setHitSound,
-    setSuccessSound,
     toggleMute,
     isMuted
   } = useAudio();
-  
-  // References to keep track of whether we've loaded sounds already
-  const hasLoadedBgMusic = useRef(false);
-  const hasLoadedHitSound = useRef(false);
-  const hasLoadedSuccessSound = useRef(false);
-
-  // Load audio files
-  useEffect(() => {
-    // Load background music if not already loaded
-    if (!hasLoadedBgMusic.current) {
-      const bgMusic = new Audio("/sounds/background.mp3");
-      bgMusic.loop = true;
-      bgMusic.volume = 0.5;
-      setBackgroundMusic(bgMusic);
-      hasLoadedBgMusic.current = true;
-    }
-    
-    // Load hit sound if not already loaded
-    if (!hasLoadedHitSound.current) {
-      const hitSound = new Audio("/sounds/hit.mp3");
-      hitSound.volume = 0.6;
-      setHitSound(hitSound);
-      hasLoadedHitSound.current = true;
-    }
-    
-    // Load success sound if not already loaded
-    if (!hasLoadedSuccessSound.current) {
-      const successSound = new Audio("/sounds/success.mp3");
-      successSound.volume = 0.7;
-      setSuccessSound(successSound);
-      hasLoadedSuccessSound.current = true;
-    }
-  }, [setBackgroundMusic, setHitSound, setSuccessSound]);
 
   // Handle background music based on game state
   useEffect(() => {
     if (!backgroundMusic) return;
     
+    // Try to play background music when game is playing
     if (gameState === "playing") {
       if (!isMuted) {
-        backgroundMusic.play().catch(error => {
-          console.log("Background music play prevented:", error);
-        });
+        // Use a timeout to ensure browser interaction requirement is met
+        setTimeout(() => {
+          backgroundMusic.play().catch(error => {
+            console.log("Background music play prevented:", error);
+          });
+        }, 500);
       }
     } else {
+      // Pause when not playing
       backgroundMusic.pause();
     }
     
