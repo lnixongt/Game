@@ -1,108 +1,59 @@
-// Script to create a complete GitHub Pages export
+// Script to create a GitHub Pages export with the fixed version of the game
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
 
 // Get current directory
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Define the export directory
-const EXPORT_DIR = path.join(__dirname, 'gh-pages-export');
+const EXPORT_DIR = path.join(__dirname, 'gh-pages-export-fixed');
+const ZIP_FILE = path.join(__dirname, 'platform-game-fixed-for-github-pages.zip');
 
 async function createGitHubPagesExport() {
   try {
-    console.log('Creating GitHub Pages export...');
+    console.log('Creating GitHub Pages export with fixed game version...');
     
-    // Clean and create the export directory
-    await fs.emptyDir(EXPORT_DIR);
+    // Ensure the export directory exists
+    await fs.ensureDir(EXPORT_DIR);
     
-    // Copy the main files
-    const filesToCopy = [
-      'index.html',
-      'game.js',
-      'styles.css',
-      'README.md'
-    ];
+    // Copy fixed game.js 
+    await fs.copy(path.join(__dirname, 'fixed-game.js'), path.join(EXPORT_DIR, 'game.js'));
     
-    for (const file of filesToCopy) {
-      await fs.copy(
-        path.join(__dirname, file),
-        path.join(EXPORT_DIR, file)
-      );
-      console.log(`Copied ${file}`);
-    }
+    // Copy files over
+    await fs.copy(path.join(__dirname, 'gh-pages-export', 'assets'), path.join(EXPORT_DIR, 'assets'), { overwrite: true });
+    await fs.copy(path.join(__dirname, 'gh-pages-export', 'README.md'), path.join(EXPORT_DIR, 'README.md'), { overwrite: true });
     
-    // Create and copy assets
-    await fs.ensureDir(path.join(EXPORT_DIR, 'assets'));
-    
-    // Copy textures if they exist
-    try {
-      await fs.copy(
-        path.join(__dirname, 'client', 'public', 'textures'),
-        path.join(EXPORT_DIR, 'assets', 'textures')
-      );
-      console.log('Copied textures');
-    } catch (error) {
-      console.log('No textures to copy or error copying textures');
-    }
-    
-    // Copy sounds if they exist
-    try {
-      await fs.copy(
-        path.join(__dirname, 'client', 'public', 'sounds'),
-        path.join(EXPORT_DIR, 'assets', 'sounds')
-      );
-      console.log('Copied sounds');
-    } catch (error) {
-      console.log('No sounds to copy or error copying sounds');
-    }
-    
-    // Create a .nojekyll file to prevent GitHub Pages from processing with Jekyll
+    // Create a .nojekyll file to ensure GitHub Pages renders properly
     await fs.writeFile(path.join(EXPORT_DIR, '.nojekyll'), '');
-    console.log('Created .nojekyll file');
     
-    // Create a simple GitHubPages-specific README
-    const githubReadme = `# Platform Adventure Game
-
-A Mario-style platform game with jumping mechanics, enemies, collectibles, and level progression.
-
-## About This Repository
-
-This repository contains a standalone platform game created for GitHub Pages. The game is built using HTML5 Canvas and JavaScript.
-
-## How to Deploy
-
-1. Fork this repository or use it as a template
-2. Go to Settings > Pages in your repository
-3. Select the main branch as the source
-4. Your game will be live at https://[your-username].github.io/[repository-name]/
-
-## Game Controls
-
-- **Move**: Arrow Keys or A/D
-- **Jump**: Space, W, or Up Arrow
-- **Pause**: ESC
-- **Restart**: R
-
-Enjoy the game!
-`;
+    // Create a ZIP file for easy download
+    exec(`cd "${EXPORT_DIR}" && zip -r "${ZIP_FILE}" .`, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error creating ZIP file: ${error.message}`);
+        return;
+      }
+      
+      if (stderr) {
+        console.error(`ZIP command stderr: ${stderr}`);
+      }
+      
+      console.log(`ZIP file created successfully: ${ZIP_FILE}`);
+      console.log('You can download this file and upload it to your GitHub repository');
+    });
     
-    await fs.writeFile(path.join(EXPORT_DIR, 'github-readme.md'), githubReadme);
-    console.log('Created GitHub-specific README');
-    
-    console.log(`\nExport completed successfully!`);
-    console.log(`Files are in the '${EXPORT_DIR}' directory`);
-    console.log('\nTo deploy to GitHub Pages:');
-    console.log('1. Create a new GitHub repository');
-    console.log(`2. Copy all files from the '${EXPORT_DIR}' directory to your repository`);
-    console.log('3. Push to GitHub');
-    console.log('4. Go to repository Settings > Pages and set the source to "main" branch');
+    console.log('GitHub Pages export created successfully!');
+    console.log(`Files are located in: ${EXPORT_DIR}`);
+    console.log('Instructions:');
+    console.log('1. Copy these files to your GitHub repository');
+    console.log('2. Enable GitHub Pages in your repository settings');
+    console.log('3. Your game will be available at https://yourusername.github.io/repositoryname/');
     
   } catch (error) {
     console.error('Error creating GitHub Pages export:', error);
   }
 }
 
-// Run the export
+// Run the function
 createGitHubPagesExport();
